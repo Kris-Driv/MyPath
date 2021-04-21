@@ -1,0 +1,10 @@
+name: MyPath
+version: 1.0.0
+author: Primus
+api: [3.0.0]
+main: Primus\MyPath\Main
+
+commands:
+  web:
+    description: 'Send message to browser'
+    usage: '/web <message>'
