@@ -6,6 +6,7 @@ use pocketmine\Server;
 use pocketmine\plugin\Plugin;
 use Primus\MyPath\ServerProperties;
 use Primus\MyPath\Protocol\Response;
+use WebSocket\ConnectionException;
 
 class SendToBrowser extends WebSocketTask
 {
@@ -14,7 +15,17 @@ class SendToBrowser extends WebSocketTask
     public function onRun()
     {
         $client = $this->client();
-        $client->text($this->request->__toString());
+        
+        try {
+
+            $client->text($this->request->__toString());
+
+        } catch(ConnectionException $e) {
+            $this->getLogger()->error('PocketCore Error: ' . $e->getMessage());
+
+            $this->getServer()->getPluginManager()->disablePlugin($this);
+            return;
+        }
 
         if($this->request->read) {
             $this->setResult(Response::fromString($client->receive()));

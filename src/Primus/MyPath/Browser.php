@@ -34,7 +34,7 @@ class Browser {
     }
 
     public function handleResponse(Response $response) : void {
-        $this->getServer()->getLogger()->info('Got response: ' . $response);
+        // $this->getServer()->getLogger()->info('Got response: ' . $response);
 
         try {
             switch($response->type) {
@@ -54,7 +54,7 @@ class Browser {
     public function handlePingResponse(int $timestamp) : void {
         $this->ping = microtime(true) - $timestamp;
 
-        $this->getServer()->getLogger()->info("Ping: " . $this->ping);
+        $this->getServer()->getLogger()->info("Ping: " . floor($this->ping*1000) . " ms");
     }
 
     public function sendRequest(Request $request): void {

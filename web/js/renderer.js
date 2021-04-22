@@ -1,5 +1,8 @@
 var scl = 1;
+
+var depthBufferImage;
 var mapBufferImage;
+
 var drawOverlay = true;
 var drawPlayers = true;
 
@@ -9,21 +12,25 @@ const renderer = {
         // Create image buffer, this should be huge performance improvement
         // Currently we're drawing 1600 chunks at about 0.3 Frames per second
         mapBufferImage = createGraphics(width, height);
+        depthBufferImage = createGraphics(width, height);
     },
 
     render: () => {
         // Draw Map buffer
-        image(mapBufferImage, 0, 0, width, height);
+        // image(mapBufferImage, 0, 0, width, height);
 
-        // Render grid overlay
-        if (drawOverlay) {
-            renderer.gridOverlay();
-            renderer.mouseCoordinates();
-        }
+        // And depth shading
+        image(depthBufferImage, 0, 0, width, height);
 
-        if(drawPlayers) {
-            renderer.drawPlayers();
-        } 
+        // // Render grid overlay
+        // if (drawOverlay) {
+        //     renderer.gridOverlay();
+        //     renderer.mouseCoordinates();
+        // }
+
+        // if(drawPlayers) {
+        //     renderer.drawPlayers();
+        // } 
     },
 
     renderChunk: (chunk) => {
@@ -40,6 +47,33 @@ const renderer = {
                 mapBufferImage.fill(renderer.getBlockColor(blockId));
 
                 mapBufferImage.rect(
+                    (chunkX * 16 * scl) + (x * scl),
+                    (chunkZ * 16 * scl) + (z * scl),
+                    scl, scl
+                );
+            }
+        }
+
+        renderer.renderChunkDepthBuffer(chunk);
+    },
+
+    renderChunkDepthBuffer: (chunk) => {
+        console.log(chunk);
+        let y, alpha;
+        let chunkX = chunk.x;
+        let chunkZ = chunk.z;
+        
+        depthBufferImage.noStroke();
+        for (var x = 0; x < 16; x++) {
+            for (var z = 0; z < 16; z++) {
+                y = random(60, 84); // Find a way to transfer real y value
+                // Calculate alpha based on the height
+                // map(value, start1, stop1, start2, stop2, [withinBounds])
+                alpha = map(y, 0, 256, 120, 255);
+
+                depthBufferImage.fill(color(0, 0, 0, alpha));
+
+                depthBufferImage.rect(
                     (chunkX * 16 * scl) + (x * scl),
                     (chunkZ * 16 * scl) + (z * scl),
                     scl, scl
@@ -98,7 +132,19 @@ const renderer = {
         // Dead bush
         '31': '#cc8e35',
         // Dirt
-        '3': '#f0932b'
+        '3': '#f0932b',
+        // Pink clay
+        '159': '#edcecc',
+        // Poppy
+        '38': '#8a140c',
+        // Brown mushroom
+        '39': '#cc8d60',
+        // Sunflower
+        '175': '#ffe100',
+        // Hardened Clay
+        '172': '#c97947',
+        // Acacia leaves
+        '161': '#78e08f',
     },
 
     getBlockColor: (blockId) => {
