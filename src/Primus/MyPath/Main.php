@@ -31,13 +31,13 @@ class Main extends PluginBase implements Listener
         $this->browser->ping();
         
 
-        for($x = 0; $x < 40; $x++) {
-            for($z = 0; $z < 40; $z++) {
-                $layer = $this->getTopLayer($x, $z);
+        // for($x = 0; $x < 40; $x++) {
+        //     for($z = 0; $z < 40; $z++) {
+        //         $layer = $this->getTopLayer($x, $z);
 
-                $this->browser->sendChunk($x, $z, $layer);
-            }   
-        }
+        //         $this->browser->sendChunk($x, $z, $layer);
+        //     }   
+        // }
     }
 
     public function sendChunk($x, $z) {
@@ -62,12 +62,23 @@ class Main extends PluginBase implements Listener
             for ($z = 0; $z < 16; $z++) {
                 for ($y = $worldHeight; $y > 0; $y--) {
                     if (($blockId = $chunk->getBlockId($x, $y, $z)) !== 0) {
-                        $layer[$x][$z] = $blockId;
+                        $layer[$x][$z][$y] = $blockId;
+
+                        if($blockId !== 9) {
+                            break;
+                        }
+                        for($yy = $y; $yy > 0; $yy--) {
+                            if($chunk->getBlockId($x, $yy, $z) !== 9) {
+                                unset($layer[$x][$z][$y]);
+                                $layer[$x][$z][$yy] = $blockId;
+                                break;
+                            }
+                        }
                         break;
                     }
                 }
-                if (!isset($layer[$x][$z])) {
-                    $layer[$x][$z] = 2; // put stone as default layer, change it to bedrock once you find out the id
+                if (!isset($layer[$x][$z][$y])) {
+                    $layer[$x][$z][64] = 2; // put stone as default layer, change it to bedrock once you find out the id
                 }
             }
         }
