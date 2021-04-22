@@ -76,6 +76,13 @@ class Browser {
         $this->sendRequest(new Request('player.join', [
             'eid' => 0, # TODO
             'name' => $player->getDisplayName(),
+            'position' => [
+                'x' => $player->getFloorX(),
+                'y' => $player->getFloorY(),
+                'z' => $player->getFloorZ(),
+                'yaw' => $player->getYaw(),
+                'pitch' => $player->getPitch()
+            ]
         ], false));
     }
 
@@ -91,7 +98,7 @@ class Browser {
     public function sendEntityPosition(Entity $player) {
         $this->sendRequest(new Request('entity.position', [
             'eid' => 0, # TODO
-            'location' => [
+            'position' => [
                 'x' => $player->getFloorX(),
                 'y' => $player->getFloorY(),
                 'z' => $player->getFloorZ(),
