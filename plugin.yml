@@ -8,3 +8,6 @@ commands:
   web:
     description: 'Send message to browser'
     usage: '/web <message>'
+  ping:
+    description: 'Send ping to browser'
+    usage: '/ping'
