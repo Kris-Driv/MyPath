@@ -21,9 +21,8 @@ class SendToBrowser extends WebSocketTask
             $client->text($this->request->__toString());
 
         } catch(ConnectionException $e) {
-            $this->getLogger()->error('PocketCore Error: ' . $e->getMessage());
+            $this->setResult($e);
 
-            $this->getServer()->getPluginManager()->disablePlugin($this);
             return;
         }
 
@@ -38,12 +37,21 @@ class SendToBrowser extends WebSocketTask
 
     public function onCompletion(Server $server)
     {
-        if($this->getResult() === true) return;
+        if(($result = $this->getResult()) === true) return;
 
         $plugin = $server->getPluginManager()->getPlugin("MyPath");
 
+        if($result instanceof \Exception) {
+            $server->getLogger()->error('PocketCore Error: ' . $result->getMessage());
+            $server->getPluginManager()->disablePlugin($plugin);
+
+            return;
+        }
+
+
         if($plugin instanceof Plugin && $plugin->isEnabled()) {
             $plugin->getBrowser()->handleResponse(Response::fromString($this->getResult()));
+            
             return;
         }
 

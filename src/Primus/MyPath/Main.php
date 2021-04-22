@@ -35,7 +35,7 @@ class Main extends PluginBase implements Listener
         //     for($z = 0; $z < 40; $z++) {
         //         $layer = $this->getTopLayer($x, $z);
 
-        //         $this->browser->sendChunk($x, $z, $layer);
+        //         // $this->browser->sendChunk($x, $z, $layer);
         //     }   
         // }
     }
