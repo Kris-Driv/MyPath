@@ -31,12 +31,20 @@ class Main extends PluginBase implements Listener
         $this->browser->ping();
         
 
-        // for($x = 0; $x < 40; $x++) {
-        //     for($z = 0; $z < 40; $z++) {
-        //         $layer = $this->getTopLayer($x, $z);
+        for($x = -10; $x < 10; $x++) {
+            for($z = -10; $z < 10; $z++) {
+                $layer = $this->getTopLayer($x, $z);
 
-        //         // $this->browser->sendChunk($x, $z, $layer);
-        //     }   
+                $this->browser->sendChunk($x, $z, $layer);
+            }   
+        }
+
+        // while(true) {
+        //     $layer = $this->getTopLayer(0, 0);
+
+        //     $this->browser->sendChunk(0, 0, $layer);
+
+        //     sleep(3);
         // }
     }
 
