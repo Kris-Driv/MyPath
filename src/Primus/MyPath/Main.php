@@ -16,7 +16,6 @@ use pocketmine\event\level\ChunkLoadEvent;
 use pocketmine\command\CommandSender;
 use pocketmine\command\Command;
 use pocketmine\utils\TextFormat;
-use WebSocket\ConnectionException;
 
 class Main extends PluginBase implements Listener
 {
@@ -31,13 +30,13 @@ class Main extends PluginBase implements Listener
         $this->browser->ping();
         
 
-        for($x = -10; $x < 10; $x++) {
-            for($z = -10; $z < 10; $z++) {
-                $layer = $this->getTopLayer($x, $z);
+        // for($x = 0; $x < 50; $x++) {
+        //     for($z = 0; $z < 50; $z++) {
+        //         $layer = $this->getTopLayer($x, $z);
 
-                $this->browser->sendChunk($x, $z, $layer);
-            }   
-        }
+        //         $this->browser->sendChunk($x, $z, $layer);
+        //     }   
+        // }
 
         // while(true) {
         //     $layer = $this->getTopLayer(0, 0);
