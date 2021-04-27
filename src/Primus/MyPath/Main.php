@@ -16,6 +16,8 @@ use pocketmine\event\level\ChunkLoadEvent;
 use pocketmine\command\CommandSender;
 use pocketmine\command\Command;
 use pocketmine\utils\TextFormat;
+use pocketmine\level\Level;
+use Primus\MyPath\Tasks\CreateFaceTask;
 
 class Main extends PluginBase implements Listener
 {
@@ -26,17 +28,30 @@ class Main extends PluginBase implements Listener
     {
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
 
-        $this->browser = new Browser($this->getServer());
+        $this->browser = new Browser($this->getServer(), 'localhost');
         $this->browser->ping();
         
 
-        // for($x = 0; $x < 50; $x++) {
-        //     for($z = 0; $z < 50; $z++) {
-        //         $layer = $this->getTopLayer($x, $z);
+        // for($x = -16; $x < 0; $x++) {
+        //     // for($z = -5; $z < 5; $z++) {
+        //         $layer = $this->getTopLayer($x, -5);
 
-        //         $this->browser->sendChunk($x, $z, $layer);
-        //     }   
+        //         $this->browser->sendChunk($x, -5, $layer);
+        //     // }
         // }
+
+        $layer = $this->getTopLayer(-17, -17);
+        $this->browser->sendChunk(-17, -17, $layer);
+
+        $layer = $this->getTopLayer(-16, -16);
+        $this->browser->sendChunk(-16, -16, $layer);
+
+
+        $layer = $this->getTopLayer(-1, -1);
+        $this->browser->sendChunk(-1, -1, $layer);
+
+        $layer = $this->getTopLayer(-33, -33);
+        $this->browser->sendChunk(-33, -33, $layer);
 
         // while(true) {
         //     $layer = $this->getTopLayer(0, 0);
@@ -47,8 +62,8 @@ class Main extends PluginBase implements Listener
         // }
     }
 
-    public function sendChunk($x, $z) {
-        $layer = $this->getTopLayer($x, $z);
+    public function sendChunk($x, $z, $level = null) {
+        $layer = $this->getTopLayer($x, $z, $level);
 
         $this->browser->sendChunk($x, $z, $layer);
     }
@@ -58,17 +73,24 @@ class Main extends PluginBase implements Listener
         return $this->browser;
     }
 
-    public function getTopLayer(int $x, $z): array
+    public function getTopLayer(int $x, int $z, ?Level $level = null): array
     {
-        $level = $this->getServer()->getDefaultLevel();
+        $level = $level ?? $this->getServer()->getDefaultLevel();
         $chunk = $level->getChunk($x, $z, true);
         $layer = [];
 
         $worldHeight = $level->getWorldHeight();
         for ($x = 0; $x < 16; $x++) {
             for ($z = 0; $z < 16; $z++) {
+
+                // How many blocks we should ignore ...
+                // $ignorance = 0;
+
                 for ($y = $worldHeight; $y > 0; $y--) {
-                    if (($blockId = $chunk->getBlockId($x, $y, $z)) !== 0) {
+                    if (!in_array($blockId = $chunk->getBlockId($x, $y, $z), [0, 7])) {
+                        // $ignorance--;
+                        // if($ignorance >= 1) continue;
+
                         $layer[$x][$z][$y] = $blockId;
 
                         if($blockId !== 9) {
@@ -84,8 +106,9 @@ class Main extends PluginBase implements Listener
                         break;
                     }
                 }
-                if (!isset($layer[$x][$z][$y])) {
-                    $layer[$x][$z][64] = 2; // put stone as default layer, change it to bedrock once you find out the id
+
+                if (!isset($layer[$x][$z])) {
+                    $layer[$x][$z][1] = 7; // put stone as default layer, change it to bedrock once you find out the id
                 }
             }
         }
@@ -123,7 +146,11 @@ class Main extends PluginBase implements Listener
      */
     public function playerJoin(PlayerJoinEvent $event)
     {
-        $this->browser->sendPlayerJoin($event->getPlayer());
+        $player = $event->getPlayer();
+
+        $this->browser->sendPlayerJoin($player);
+
+        $this->getServer()->getAsyncPool()->submitTask(new CreateFaceTask($player->getId(), $player->getSkin()->getSkinData()));
     }
 
     /**
@@ -139,7 +166,7 @@ class Main extends PluginBase implements Listener
      */
     public function onMove(PlayerMoveEvent $event)
     {
-        if($event->getTo()->distance($event->getFrom()) < 0.3) return;
+        // if($event->getTo()->distance($event->getFrom()) < 0.3) return;
         
         $this->browser->sendEntityPosition($event->getPlayer());
     }
@@ -147,27 +174,27 @@ class Main extends PluginBase implements Listener
     public function blockPlace(BlockPlaceEvent $event)
     {
         $block = $event->getBlock();
-        $this->sendChunk($block->getFloorX() >> 4, $block->getFloorZ() >> 4);
+        $this->sendChunk($block->getFloorX() >> 4, $block->getFloorZ() >> 4, $block->getLevel());
     }
 
     public function blockBreak(BlockBreakEvent $event)
     {
         $block = $event->getBlock();
-        $this->sendChunk($block->getFloorX() >> 4, $block->getFloorZ() >> 4);
+        $this->sendChunk($block->getFloorX() >> 4, $block->getFloorZ() >> 4, $block->getLevel());
     }
 
     public function chunkPopulate(ChunkPopulateEvent $event) 
     {
         $chunk = $event->getChunk();
 
-        $this->sendChunk($chunk->getX(), $chunk->getZ());
+        $this->sendChunk($chunk->getX(), $chunk->getZ(), $event->getLevel());
     }
 
     public function chunkLoaded(ChunkLoadEvent $event) 
     {
         $chunk = $event->getChunk();
 
-        $this->sendChunk($chunk->getX(), $chunk->getZ());
+        $this->sendChunk($chunk->getX(), $chunk->getZ(), $event->getLevel());
     }
 
 }

@@ -19,7 +19,7 @@ abstract class WebSocketTask extends AsyncTask
 
     public function __construct(string $address, int $port, ?Request $request = null)
     {
-        $this->address = 'ws://' . $address . ':' . $port;
+        $this->address = $address;
         $this->port = $port;
         $this->request = $request;
     }
@@ -29,7 +29,7 @@ abstract class WebSocketTask extends AsyncTask
             return $this->client;
         }
 
-        $this->client = Browser::make($this->address);
+        $this->client = Browser::make($this->address, $this->port);
 
         return $this->client;
     }

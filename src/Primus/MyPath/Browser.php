@@ -29,8 +29,8 @@ class Browser {
         return $this->server;
     }
 
-    public static function make(string $address) : Client {
-        return new Client("ws://localhost:27095");
+    public static function make(string $address, int $port) : Client {
+        return new Client("ws://$address:$port");
     }
 
     public function handleResponse(Response $response) : void {
@@ -74,7 +74,7 @@ class Browser {
 
     public function sendPlayerJoin(Player $player) {
         $this->sendRequest(new Request('player.join', [
-            'eid' => 0, # TODO
+            'eid' => $player->getId(), # TODO
             'name' => $player->getDisplayName(),
             'position' => [
                 'x' => $player->getFloorX(),
@@ -86,24 +86,31 @@ class Browser {
         ], false));
     }
 
+    public function sendPlayerFace(int $eid, string $pixelArray) {
+        $this->sendRequest(new Request('player.face', [
+            'eid' => $eid,
+            'pixelArray' => $pixelArray
+        ], false));
+    }
+
     public function sendPlayerQuit(Player $player, string $reason, string $message) {
         $this->sendRequest(new Request('player.leave', [
-            'eid' => 0, # TODO
+            'eid' => $player->getId(), # TODO
             'name' => $player->getDisplayName(),
             'reason' => $reason,
             'message' => $message
         ], false));
     }
 
-    public function sendEntityPosition(Entity $player) {
+    public function sendEntityPosition(Entity $entity) {
         $this->sendRequest(new Request('entity.position', [
-            'eid' => 0, # TODO
+            'eid' => $entity->getId(), # TODO
             'position' => [
-                'x' => $player->getFloorX(),
-                'y' => $player->getFloorY(),
-                'z' => $player->getFloorZ(),
-                'yaw' => $player->getYaw(),
-                'pitch' => $player->getPitch()
+                'x' => $entity->getFloorX(),
+                'y' => $entity->getFloorY(),
+                'z' => $entity->getFloorZ(),
+                'yaw' => $entity->getYaw(),
+                'pitch' => $entity->getPitch()
             ],
         ], false));
     }
