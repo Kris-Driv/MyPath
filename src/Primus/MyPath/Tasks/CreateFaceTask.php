@@ -62,7 +62,7 @@ class CreateFaceTask extends AsyncTask
         $plugin = $server->getPluginManager()->getPlugin("MyPath");
         if(!$plugin) return;
 
-        $plugin->getBrowser()->sendPlayerFace($this->eid, $this->getResult());
+        $plugin->sendPlayerFace($this->eid, $this->getResult());
     }
 
 

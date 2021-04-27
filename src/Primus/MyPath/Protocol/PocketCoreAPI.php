@@ -1,6 +1,6 @@
 <?php
 
-namespace Primus\MyPath;
+namespace Primus\MyPath\Protocol;
 
 use WebSocket\Client;
 
@@ -12,29 +12,14 @@ use Primus\MyPath\Tasks\SendToBrowser;
 use Primus\MyPath\Protocol\Request;
 use Primus\MyPath\Protocol\Response;
 
-class Browser {
-    use ServerProperties;
+trait PocketCoreAPI {
 
     protected $server;
 
     protected $ping;
 
-    public function __construct(Server $server, string $address = 'localhost', int $port = 27095) {
-        $this->server = $server;
-        $this->address = $address;
-        $this->port = $port;
-    }
-
-    public function getServer(): Server {
-        return $this->server;
-    }
-
-    public static function make(string $address, int $port) : Client {
-        return new Client("ws://$address:$port");
-    }
-
     public function handleResponse(Response $response) : void {
-        // $this->getServer()->getLogger()->info('Got response: ' . $response);
+        $this->getServer()->getLogger()->info('Got response: ' . $response);
 
         try {
             switch($response->type) {
@@ -58,7 +43,7 @@ class Browser {
     }
 
     public function sendRequest(Request $request): void {
-        $this->getServer()->getAsyncPool()->submitTask(new SendToBrowser($this->address, $this->port, $request));
+        $this->thread->enqueuePacket($request);
     }
 
     public function ping(): void {

@@ -2,6 +2,7 @@
 
 namespace Primus\MyPath;
 
+use pocketmine\plugin\Plugin;
 use pocketmine\plugin\PluginBase;
 
 use pocketmine\event\Listener;
@@ -17,60 +18,64 @@ use pocketmine\command\CommandSender;
 use pocketmine\command\Command;
 use pocketmine\utils\TextFormat;
 use pocketmine\level\Level;
+use Primus\MyPath\Protocol\PocketCoreAPI;
+use Primus\MyPath\Protocol\PocketCoreClientThread;
+use Primus\MyPath\Protocol\Request;
+use Primus\MyPath\Protocol\Response;
+use Primus\MyPath\Protocol\ThreadReaderTask;
 use Primus\MyPath\Tasks\CreateFaceTask;
 
 class Main extends PluginBase implements Listener
 {
+    use PocketCoreAPI;
 
-    protected $browser;
+    protected $thread;
 
     public function onEnable()
     {
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
 
-        $this->browser = new Browser($this->getServer(), 'localhost');
-        $this->browser->ping();
-        
+        $this->startThread();
+        $this->scheduleThreadReader();
 
-        // for($x = -16; $x < 0; $x++) {
-        //     // for($z = -5; $z < 5; $z++) {
-        //         $layer = $this->getTopLayer($x, -5);
-
-        //         $this->browser->sendChunk($x, -5, $layer);
-        //     // }
-        // }
-
-        $layer = $this->getTopLayer(-17, -17);
-        $this->browser->sendChunk(-17, -17, $layer);
-
-        $layer = $this->getTopLayer(-16, -16);
-        $this->browser->sendChunk(-16, -16, $layer);
-
-
-        $layer = $this->getTopLayer(-1, -1);
-        $this->browser->sendChunk(-1, -1, $layer);
-
-        $layer = $this->getTopLayer(-33, -33);
-        $this->browser->sendChunk(-33, -33, $layer);
-
-        // while(true) {
-        //     $layer = $this->getTopLayer(0, 0);
-
-        //     $this->browser->sendChunk(0, 0, $layer);
-
-        //     sleep(3);
-        // }
+        $this->ping();    
     }
 
-    public function sendChunk($x, $z, $level = null) {
+    public function onDisable()
+    {
+        $this->stopThread();
+    }
+
+    private function scheduleThreadReader() 
+    {
+        $server = $this->getServer();
+
+        $this->getScheduler()->scheduleRepeatingTask(new ThreadReaderTask($this->thread, function(Response $response) use ($server)  {
+            $server->getLogger()->info("Got response: " . $response->type);
+
+            $plugin = $server->getPluginManager()->getPlugin('MyPath');
+            if($plugin instanceof Plugin && $plugin->isEnabled()) {
+                $plugin->handleResponse($response);
+            }
+        }), 1);
+    }
+
+    private function startThread()
+    {
+        $this->thread = new PocketCoreClientThread('localhost', '27095', $this->getServer()->getLogger(), 2);
+    }
+
+    private function stopThread()
+    {
+        $this->thread->stop();
+        $this->thread->quit();
+    }
+
+    public function createLayerAndSend($x, $z, $level = null)
+    {
         $layer = $this->getTopLayer($x, $z, $level);
 
-        $this->browser->sendChunk($x, $z, $layer);
-    }
-
-    public function getBrowser()
-    {
-        return $this->browser;
+        $this->sendChunk($x, $z, $layer);
     }
 
     public function getTopLayer(int $x, int $z, ?Level $level = null): array
@@ -93,11 +98,11 @@ class Main extends PluginBase implements Listener
 
                         $layer[$x][$z][$y] = $blockId;
 
-                        if($blockId !== 9) {
+                        if ($blockId !== 9) {
                             break;
                         }
-                        for($yy = $y; $yy > 0; $yy--) {
-                            if($chunk->getBlockId($x, $yy, $z) !== 9) {
+                        for ($yy = $y; $yy > 0; $yy--) {
+                            if ($chunk->getBlockId($x, $yy, $z) !== 9) {
                                 unset($layer[$x][$z][$y]);
                                 $layer[$x][$z][$yy] = $blockId;
                                 break;
@@ -120,20 +125,16 @@ class Main extends PluginBase implements Listener
     {
         switch (strtolower($command->getName())) {
             case 'ping':
-                if(!$this->browser) {
-                    $sender->sendMessage(TextFormat::RED . 'Browser interface not constructed');
-                    return true;
-                }
+                $this->ping($sender->getName());
 
-                $this->browser->ping($sender->getName());
                 $sender->sendMessage('Pinging ...');
                 break;
-                
+
             case 'web':
                 if (empty($args)) return false;
 
                 // $this->sendData(['type' => 'command', 'payload' => implode(' ', $args)]);
-                $this->browser->sendMessage(implode(', ', $args), true);
+                $this->sendMessage(implode(', ', $args), true);
 
                 $sender->sendMessage('Message sent.');
                 break;
@@ -148,7 +149,7 @@ class Main extends PluginBase implements Listener
     {
         $player = $event->getPlayer();
 
-        $this->browser->sendPlayerJoin($player);
+        $this->sendPlayerJoin($player);
 
         $this->getServer()->getAsyncPool()->submitTask(new CreateFaceTask($player->getId(), $player->getSkin()->getSkinData()));
     }
@@ -158,7 +159,7 @@ class Main extends PluginBase implements Listener
      */
     public function playerLeave(PlayerQuitEvent $event)
     {
-        $this->browser->sendPlayerQuit($event->getPlayer(), $event->getQuitReason(), $event->getQuitMessage());
+        $this->sendPlayerQuit($event->getPlayer(), $event->getQuitReason(), $event->getQuitMessage());
     }
 
     /**
@@ -167,34 +168,33 @@ class Main extends PluginBase implements Listener
     public function onMove(PlayerMoveEvent $event)
     {
         // if($event->getTo()->distance($event->getFrom()) < 0.3) return;
-        
-        $this->browser->sendEntityPosition($event->getPlayer());
+
+        $this->sendEntityPosition($event->getPlayer());
     }
 
     public function blockPlace(BlockPlaceEvent $event)
     {
         $block = $event->getBlock();
-        $this->sendChunk($block->getFloorX() >> 4, $block->getFloorZ() >> 4, $block->getLevel());
+        $this->createLayerAndSend($block->getFloorX() >> 4, $block->getFloorZ() >> 4, $block->getLevel());
     }
 
     public function blockBreak(BlockBreakEvent $event)
     {
         $block = $event->getBlock();
-        $this->sendChunk($block->getFloorX() >> 4, $block->getFloorZ() >> 4, $block->getLevel());
+        $this->createLayerAndSend($block->getFloorX() >> 4, $block->getFloorZ() >> 4, $block->getLevel());
     }
 
-    public function chunkPopulate(ChunkPopulateEvent $event) 
+    public function chunkPopulate(ChunkPopulateEvent $event)
     {
         $chunk = $event->getChunk();
 
-        $this->sendChunk($chunk->getX(), $chunk->getZ(), $event->getLevel());
+        $this->createLayerAndSend($chunk->getX(), $chunk->getZ(), $event->getLevel());
     }
 
-    public function chunkLoaded(ChunkLoadEvent $event) 
+    public function chunkLoaded(ChunkLoadEvent $event)
     {
         $chunk = $event->getChunk();
 
-        $this->sendChunk($chunk->getX(), $chunk->getZ(), $event->getLevel());
+        $this->createLayerAndSend($chunk->getX(), $chunk->getZ(), $event->getLevel());
     }
-
 }
