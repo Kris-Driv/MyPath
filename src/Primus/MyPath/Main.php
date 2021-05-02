@@ -9,6 +9,7 @@ use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\level\ChunkPopulateEvent;
@@ -16,11 +17,9 @@ use pocketmine\event\level\ChunkLoadEvent;
 
 use pocketmine\command\CommandSender;
 use pocketmine\command\Command;
-use pocketmine\utils\TextFormat;
 use pocketmine\level\Level;
 use Primus\MyPath\Protocol\PocketCoreAPI;
 use Primus\MyPath\Protocol\PocketCoreClientThread;
-use Primus\MyPath\Protocol\Request;
 use Primus\MyPath\Protocol\Response;
 use Primus\MyPath\Protocol\ThreadReaderTask;
 use Primus\MyPath\Tasks\CreateFaceTask;
@@ -38,7 +37,8 @@ class Main extends PluginBase implements Listener
         $this->startThread();
         $this->scheduleThreadReader();
 
-        $this->ping();    
+        $this->login($this->getServer());
+        // $this->ping();
     }
 
     public function onDisable()
@@ -162,28 +162,47 @@ class Main extends PluginBase implements Listener
         $this->sendPlayerQuit($event->getPlayer(), $event->getQuitReason(), $event->getQuitMessage());
     }
 
+    
     /**
      * @priority MONITOR
+     * @ignoreCancelled false
      */
     public function onMove(PlayerMoveEvent $event)
     {
+        if($event->isCancelled()) return;
         // if($event->getTo()->distance($event->getFrom()) < 0.3) return;
 
         $this->sendEntityPosition($event->getPlayer());
     }
 
+    /**
+     * @priority MONITOR
+     * @ignoreCancelled false
+     */
     public function blockPlace(BlockPlaceEvent $event)
     {
+        if($event->isCancelled()) return;
+
         $block = $event->getBlock();
         $this->createLayerAndSend($block->getFloorX() >> 4, $block->getFloorZ() >> 4, $block->getLevel());
     }
 
+    /**
+     * @priority MONITOR
+     * @ignoreCancelled false
+     */
     public function blockBreak(BlockBreakEvent $event)
     {
+        if($event->isCancelled()) return;
+
         $block = $event->getBlock();
         $this->createLayerAndSend($block->getFloorX() >> 4, $block->getFloorZ() >> 4, $block->getLevel());
     }
 
+    /**
+     * @priority MONITOR
+     * @ignoreCancelled false
+     */
     public function chunkPopulate(ChunkPopulateEvent $event)
     {
         $chunk = $event->getChunk();
@@ -191,10 +210,26 @@ class Main extends PluginBase implements Listener
         $this->createLayerAndSend($chunk->getX(), $chunk->getZ(), $event->getLevel());
     }
 
+    /**
+     * @priority MONITOR
+     * @ignoreCancelled false
+     */
     public function chunkLoaded(ChunkLoadEvent $event)
     {
         $chunk = $event->getChunk();
 
         $this->createLayerAndSend($chunk->getX(), $chunk->getZ(), $event->getLevel());
     }
+
+    /**
+     * @priority MONITOR
+     * @ignoreCancelled false
+     */
+    public function onChat(PlayerChatEvent $event)
+    {
+        if($event->isCancelled()) return;
+        
+        $this->sendPlayerMessage($event->getPlayer()->getId(), $event->getMessage());
+    }
+
 }

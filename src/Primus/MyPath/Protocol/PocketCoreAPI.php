@@ -2,13 +2,10 @@
 
 namespace Primus\MyPath\Protocol;
 
-use WebSocket\Client;
-
 use pocketmine\Server;
 use pocketmine\Player;
 use pocketmine\entity\Entity;
 
-use Primus\MyPath\Tasks\SendToBrowser;
 use Primus\MyPath\Protocol\Request;
 use Primus\MyPath\Protocol\Response;
 
@@ -25,6 +22,14 @@ trait PocketCoreAPI {
             switch($response->type) {
                 case 'ping':
                     $this->handlePingResponse($response->get('time'));
+                    break;
+                case 'login.server':
+                    if($response->body['status'] !== true) {
+                        $this->getLogger()->error('Authentication with supervisor proxy server failed.');
+                        $this->getServer()->getPluginManager()->disablePlugin($this);
+                    } else {
+                        $this->getLogger()->info('Connected to Supervisor proxy server successfully!');
+                    }
                     break;
                 default:
                     $this->getServer()->getLogger()->info('Unhandled response type: ' . $response->type . ' ');
@@ -48,6 +53,13 @@ trait PocketCoreAPI {
 
     public function ping(): void {
         $this->sendRequest(Request::ping());
+    }
+
+    public function sendPlayerMessage(int $eid, string $message) {
+        $this->sendRequest(new Request('player.message', [
+            'message' => $message,
+            'eid' => $eid,
+        ], false));
     }
     
     public function sendMessage(string $message, bool $broadcast = true) {
@@ -108,6 +120,15 @@ trait PocketCoreAPI {
                 'layer' => $layer
             ]
         ], false));
+    }
+
+    public function login(Server $server) {
+        $this->sendRequest(new Request('login.server', [
+            'levels' => ['rblock'], // TODO
+            'name' => $server->getName(),
+            'ip' => $server->getIp(),
+            'port' => $server->getPort()
+        ], true));
     }
 
 }

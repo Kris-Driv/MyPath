@@ -8,4 +8,8 @@ class Request extends Response {
         return new self('ping', ['time' => microtime(true)], true);
     }
 
+    public static function message(string $message): self {
+        return new self('message', ['message' => $message]);
+    }
+
 }

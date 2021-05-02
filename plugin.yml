@@ -1,5 +1,5 @@
-name: MyPath
-version: 1.0.0
+name: Snitch
+version: 1.1.0
 author: Primus
 api: [3.0.0]
 main: Primus\MyPath\Main
